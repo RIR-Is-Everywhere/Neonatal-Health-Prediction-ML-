@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neonatal Health Prediction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .app-shell { max-width: 1100px; }
+        .card { border-radius: 16px; box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08); border: 1px solid rgba(16, 24, 40, 0.08); }
+        .hero { border-radius: 16px; background: linear-gradient(135deg, #0d6efd 0%, #2f80ed 45%, #17a2b8 100%); color: #fff; }
+        .hero small { opacity: 0.9; }
+        .result-badge { font-weight: 600; letter-spacing: 0.2px; }
+        .risk-high { background: #dc3545; }
+        .risk-low { background: #198754; }
+        .field-note { font-size: 0.85rem; color: #6c757d; }
+        .disclaimer { font-size: 0.9rem; color: #6c757d; }
+        .required::after { content: " *"; color: #dc3545; }
+    </style>
+</head>
+<body>
+
+<div class="container py-4 app-shell">
+    <div class="hero p-4 p-md-5 mb-4">
+        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+            <div>
+                <h1 class="h3 mb-2">Neonatal Health Prediction (ML)</h1>
+                <small>Structured input form for model-based screening outputs (Decision Tree and Random Forest).</small>
+            </div>
+            <div class="text-md-end">
+                <div class="badge bg-light text-dark p-2">For education/research use</div>
+            </div>
+        </div>
+        <div class="mt-3 disclaimer">
+            This tool provides machine-learning model outputs only. It is not a medical device and must not be used as a substitute for clinical judgment, diagnosis, or treatment.
+        </div>
+    </div>
+
+    {% if results %}
+    <div class="card p-4 mb-4" aria-live="polite">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+            <h2 class="h5 mb-0">Model Outputs</h2>
+            <div class="text-muted small">“Confidence” is the model’s predicted probability of the selected class and may be miscalibrated.</div>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="p-3 rounded-3 text-white {{ 'risk-high' if results.dt_is_high_risk else 'risk-low' }}">
+                    <div class="d-flex align-items-center justify-content-between gap-3">
+                        <div>
+                            <div class="small opacity-75">Decision Tree</div>
+                            <div class="h4 mb-0">{{ results.dt_label }}</div>
+                        </div>
+                        <span class="badge bg-light text-dark result-badge">Confidence: {{ results.dt_conf }}%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="p-3 rounded-3 text-white {{ 'risk-high' if results.rf_is_high_risk else 'risk-low' }}">
+                    <div class="d-flex align-items-center justify-content-between gap-3">
+                        <div>
+                            <div class="small opacity-75">Random Forest</div>
+                            <div class="h4 mb-0">{{ results.rf_label }}</div>
+                        </div>
+                        <span class="badge bg-light text-dark result-badge">Confidence: {{ results.rf_conf }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card p-4">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+            <h2 class="h5 mb-0">Clinical Features (Coded)</h2>
+            <div class="text-muted small">All fields are required.</div>
+        </div>
+        <div class="disclaimer mb-3">
+            Values are encoded categories used during model training. Select the option that best matches the patient record.
+        </div>
+
+        {% if errors and errors|length > 0 %}
+        <div class="alert alert-danger" role="alert">
+            Please review the highlighted fields and submit again.
+        </div>
+        {% endif %}
+
+        <form action="/predict" method="post">
+            <div class="row g-3">
+                {% for feature in features %}
+                {% set meta = feature_meta[feature] %}
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold mb-1 required" for="f_{{ feature }}">{{ meta.label }}</label>
+                    <div class="field-note mb-2">{{ meta.note }}</div>
+
+                    {% if meta.type == 'select' %}
+                    <select
+                        id="f_{{ feature }}"
+                        name="{{ feature }}"
+                        class="form-select {% if errors and errors.get(feature) %}is-invalid{% endif %}"
+                        required
+                    >
+                        <option value="" disabled {% if not form_values or not form_values.get(feature) %}selected{% endif %}>Select an option…</option>
+                        {% for val, text in meta.options.items() %}
+                        <option value="{{ val }}" {% if form_values and form_values.get(feature) == (val|string) %}selected{% endif %}>
+                            {{ val }} — {{ text }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% else %}
+                    <input
+                        id="f_{{ feature }}"
+                        type="number"
+                        step="any"
+                        name="{{ feature }}"
+                        value="{{ form_values.get(feature, '') if form_values else '' }}"
+                        class="form-control {% if errors and errors.get(feature) %}is-invalid{% endif %}"
+                        placeholder="Enter a value…"
+                        required
+                    >
+                    {% endif %}
+
+                    {% if errors and errors.get(feature) %}
+                    <div class="invalid-feedback">{{ errors.get(feature) }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="text-center mt-3">
+                <button type="submit" class="btn btn-primary btn-lg px-5">Generate Model Output</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="mt-4 disclaimer">
+        <strong>Important:</strong> If you are using this with real patient data, ensure appropriate approvals, privacy protections, and data governance. Do not enter personally identifiable information.
+    </div>
+</div>
+
+</body>
+</html>
