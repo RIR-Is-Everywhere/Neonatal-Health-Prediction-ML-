@@ -1,0 +1,25 @@
+unhealthy -- > 
+
+
+Feature	Input Value	Meaning
+BirthAsphyxia	0	No
+HypDistrib	0	Equal
+HypoxiaInO2	2	Severe
+CO2		2	Normal
+ChestXray	3	Oligaemic
+Grunting	1	Yes
+LVHreport	0	No
+LowerBodyO2	2	<5
+RUQO2		2	<5
+CO2Report	0	<7.5
+XrayReport	3	Oligaemic
+Disease		0	Fallot
+GruntingReport	1	Yes
+Age		0	0-3 days
+LVH		0	No
+DuctFlow	1	None
+CardiacMixing	0	Complete
+LungParench	2	Normal
+LungFlow	1	Low
+
+
